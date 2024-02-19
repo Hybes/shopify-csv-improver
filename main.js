@@ -65,8 +65,10 @@ async function generateOrImproveText(prompt, maxTokens = 2500) {
   }
 
 async function processCsvRow(row, rowIndex) {
-    console.log(`Processing row ${rowIndex + 1}`);
-  row.Handle = row.Handle.toLowerCase().replace(/[^a-z0-9]/g, "-");
+  console.log(`Processing row ${rowIndex + 1}`);
+  if (row.Handle) {
+    row.Handle = row.Handle.toLowerCase().replace(/[^a-z0-9]/g, "-");
+  }
 
   if (!row["Body (HTML)"] && row.Title) {
     row["Body (HTML)"] = await generateOrImproveText(
@@ -145,7 +147,7 @@ async function processCsvRow(row, rowIndex) {
     row['Variant Price'] = parseFloat(cleanedPrice);
   }
 
-    await delay(1000);
+    await delay(250);
 
   return row;
 }
