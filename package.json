@@ -1,0 +1,16 @@
+{
+  "name": "sa",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "node main.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "dotenv": "^16.4.3",
+    "openai": "^4.27.0"
+  }
+}
