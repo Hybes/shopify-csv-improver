@@ -8,7 +8,7 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let delayTime = 500;
+let delayTime = 50;
 const maxDelay = 60000;
 
 function formatCsvField(field) {
@@ -39,7 +39,7 @@ async function generateOrImproveText(prompt, maxTokens = 4000) {
         messages: [
           {
             role: 'system',
-            content: 'You are a Shopify store owner and you need help with your product descriptions and SEO. You are working with columns in a product list, and should only provide the value for the column and no surrounding text.'
+            content: 'You are an English Shopify store owner and you need help with your product descriptions and SEO. You are working with columns in a product list, and should only provide the value for the column and no surrounding text.'
           },
           {
             role: 'user',
@@ -88,22 +88,18 @@ async function processCsvRow(row, rowIndex) {
 
   if (!row["SEO Description"] && row.Title) {
     row["SEO Description"] = await generateOrImproveText(
-      `Write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
+      `Using your knowledge of UK Motocross, write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
     );
   } else {
     row["SEO Description"] = await generateOrImproveText(
-      `Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
-    );
+      `Using your knowledge of UK Motocross, Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
+    ).replace(/[\n\r]/g, " ").replace(/^"|"$/g, '');
   }
 
     if (!row["Image Alt Text"] && row.Title) {
     row["Image Alt Text"] = await generateOrImproveText(
       `Write an alt text for the product image of the product titled "${row.Title}", you should only return the alt text as plain text and nothing else.`
     );
-    } else {
-        row["Image Alt Text"] = await generateOrImproveText(
-            `Improve this alt text for the product image: "${row["Image Alt Text"]}", please only return the improved alt text as plain text and nothing else.`
-        );
     }
 
   if (
@@ -112,7 +108,7 @@ async function processCsvRow(row, rowIndex) {
     row["SEO Title"] &&
     row["SEO Description"]
   ) {
-    const tagsPrompt = `Given the product title "${row.Title}", description "${row["Body (HTML)"]}", SEO title "${row["SEO Title"]}", and SEO description "${row["SEO Description"]}", generate at least 10 related tags to be used for shopify filtering, please only return the tags, comma seperated.`;
+    const tagsPrompt = `Given the product title "${row.Title}", SEO title "${row["SEO Title"]}", and SEO description "${row["SEO Description"]}", generate at least 10 related tags to be used for shopify filtering, please only return the tags, comma seperated.`;
     row.Tags = await generateOrImproveText(tagsPrompt);
   }
 
@@ -123,7 +119,7 @@ async function processCsvRow(row, rowIndex) {
   }
 
   if (row.Title && row['Body (HTML)']) {
-    const typePrompt = `Given the product title "${row.Title}" and its description "${row['Body (HTML)']}", list all potential item collections and product types it could belong to. You should dynamically fetch the type from the title, for example: 180 Atlas Jersey - Black/Green would be in the type/collection '180' and V1 Flora Helmet - Dark Indigo Blue would be 'V1' Please only return the item collections and product types, comma separated, and with the first letter of each word capitalized, and NOTHING else.`;
+    const typePrompt = `Given the product title "${row.Title}" and its description, list all potential item collections and product types it could belong to. You should dynamically fetch the type from the title, for example: 180 Atlas Jersey - Black/Green would be in the type/collection '180' and V1 Flora Helmet - Dark Indigo Blue would be 'V1' Please only return the item collections and product types, comma separated, and with the first letter of each word capitalized, and NOTHING else. Here is the description: "${row['Body (HTML)']}"`;
     row['Type'] = await generateOrImproveText(typePrompt);
   }
 
@@ -170,7 +166,7 @@ async function readAndProcessCsv(filePath) {
         for await (const row of stream) {
           const processedRow = await processCsvRow(row, rowIndex++);
           processedRows.push(processedRow);
-          await delay(250); // Ensure there's a delay between processing rows
+          await delay(50); // Ensure there's a delay between processing rows
         }
         console.log("CSV file successfully processed");
         resolve(processedRows); // Resolve after all rows have been processed
