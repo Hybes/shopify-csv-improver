@@ -8,7 +8,7 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let delayTime = 250;
+let delayTime = 100;
 const maxDelay = 60000;
 
 function formatCsvField(field) {
@@ -31,15 +31,15 @@ async function exponentialBackoff() {
   delayTime = Math.min(delayTime * 2, maxDelay);
 }
 
-async function generateOrImproveText(prompt, maxTokens = 2500) {
+async function generateOrImproveText(prompt, maxTokens = 4000) {
     try {
         // console.log(`Generating or improving text for prompt: ${prompt}`);
       const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4-turbo-preview",
         messages: [
           {
             role: 'system',
-            content: 'You are a Shopify store owner and you need help with your product descriptions and SEO.'
+            content: 'You are a Shopify store owner and you need help with your product descriptions and SEO. You are working with columns in a product list, and should only provide the value for the column and no surrounding text.'
           },
           {
             role: 'user',
@@ -47,9 +47,9 @@ async function generateOrImproveText(prompt, maxTokens = 2500) {
           }
         ],
         max_tokens: maxTokens,
-        temperature: 0.7,
+        temperature: 0.9,
       });
-        delayTime = 250;
+        delayTime = 100;
         // console.log("API call successful, processing response");
       return response.choices[0].message.content.trim();
     } catch (error) {
@@ -78,7 +78,7 @@ async function processCsvRow(row, rowIndex) {
 
   if (!row["SEO Title"] && row.Title) {
     row["SEO Title"] = await generateOrImproveText(
-      `Generate an SEO-friendly title for a product titled "${row.Title}" to be used in shopift as my SEO title. Please only return the title as plain text and nothing else.`
+      `Generate an SEO-friendly title for a product titled "${row.Title}" to be used in shopify as my SEO title. Please only return the title as plain text and nothing else.`
     );
   } else {
     row["SEO Title"] = await generateOrImproveText(
@@ -88,11 +88,11 @@ async function processCsvRow(row, rowIndex) {
 
   if (!row["SEO Description"] && row.Title) {
     row["SEO Description"] = await generateOrImproveText(
-      `Write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else.`
+      `Write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
     );
   } else {
     row["SEO Description"] = await generateOrImproveText(
-      `Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", please only return the new SEO description as plain text and nothing else.`
+      `Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
     );
   }
 
@@ -117,12 +117,13 @@ async function processCsvRow(row, rowIndex) {
   }
 
   if (row.Title && row['Body (HTML)']) {
-    const categoryPrompt = `Based on the product title "${row.Title}" and description "${row['Body (HTML)']}", choose the most appropriate category: Kit, Goggles, Helmets, Boots, Protection, Parts, Workshop & Tools, Stark Varg, Casual, Clearance. Please only return the category name and nothing else.`;
+    const categoryPrompt = `Based on the product title and description, choose the most appropriate category, You MUST use one of the categories in my lists and CAN NOT use something that is not in the following list: Kit Combos, Jerseys, Pants, Gloves, Socks, Knee Brace Socks, Body Warmers, Waterproof Gear, Youth Kit, Kit Bags, Boot Bags, Air Break, Frontline, O frame 2.0, O frame, L frame, Vue, Airspace, Main, Youth, Powerbomb, Powercore, Lenses, Tear Offs, Roll Off Systems, Roll Off Film, Face Foam, Goggle Bags, Moto-10 Spherical, Moto-9S Flex, MX-9 MIPS, V1, V3, V3 RS, Peaks, Instinct, Motion, Comp, Body Protection, Knee Braces, Knee & Elbow Guards, Brake Pads, Brake Rotors, Brake Lines, Brake Parts & Accessories, Plastics, Hand Guards, Seat Covers, Seat Foams, Air Filters, Oil Filters, Fuel Filters, Airbox Accessories, 2-Stroke Exhausts, 4-Stroke Exhausts, Exhaust Accessories, Chains, Sprockets, Chain Guides, Sliders & Rollers, Chain Master Links, Axle Blocks, Sprocket Accessories, Grips, Throttle Tubes, Handlebars, Barpads, Bar Mounts, Brake & Clutch Levers, Foot Pegs, Kick Stands, Brake Pedals, Gear Levers, Cables & Wires, Control Accessories, Pistons, Gaskets, Clutch Parts, Radiators, Engine Covers, Oil Filter Covers, Engine Bearings, Rebuild Kits, Engine Accessories, Bolt Kits, Bling Kits, Engine Drain Bolts, Seals & Bushings, Suspension Bearings, Springs, Triple Clamps, Holeshot Device, Fork Bleeders, Linkage Kits, Suspension Accessories, Tyres, Wheel Sets, Innertubes, Mousses, Rim Locks & Tapes, Hour Meters, Spark Plugs, Kill & MAP Switches, Other Electrics, Tyre Levers, Spoke Wrench, T-handles, Tool Box, Engine Oil, Gear Oil, 2-Stroke Oil, Radiator Coolant, Lubricants & Sprays, Cleaning Products, Airbox Covers, Cleaning Accessories, Bike Stands, Fuel Cans, Chairs, Ramps, Pit Boards, Pumps, Straps. If the prduct is related to Stark/Stark Varg, please place it in one of the following: "Bikes, Parts, Tools & workshop". Please only return the category name and nothing else. YOU MUST NOT STRAY OUTSIDE OF MY PROVIDED LIST. You should dynamically work out the category only based on this list. Here is the title "${row.Title}" and description "${row['Body (HTML)']}"`;
     row['Product Category'] = await generateOrImproveText(categoryPrompt);
+    console.log(`Category for ${row.Title}: ${row['Product Category']}`);
   }
 
   if (row.Title && row['Body (HTML)']) {
-    const typePrompt = `Given the product title "${row.Title}" and its description "${row['Body (HTML)']}", list all potential item collections and product types it could belong to. For example: gloves, goggles, helmets, boots, protection, parts, workshop & tools, stark varg, casual, clearance. Please only return the item collections and product types, comma separated, and with the first letter of each word capitalized, and NOTHING else.`;
+    const typePrompt = `Given the product title "${row.Title}" and its description "${row['Body (HTML)']}", list all potential item collections and product types it could belong to. You should dynamically fetch the type from the title, for example: 180 Atlas Jersey - Black/Green would be in the type/collection '180' and V1 Flora Helmet - Dark Indigo Blue would be 'V1' Please only return the item collections and product types, comma separated, and with the first letter of each word capitalized, and NOTHING else.`;
     row['Type'] = await generateOrImproveText(typePrompt);
   }
 
