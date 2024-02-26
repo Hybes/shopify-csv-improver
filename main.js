@@ -8,7 +8,7 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let delayTime = 100;
+let delayTime = 500;
 const maxDelay = 60000;
 
 function formatCsvField(field) {
@@ -49,7 +49,7 @@ async function generateOrImproveText(prompt, maxTokens = 4000) {
         max_tokens: maxTokens,
         temperature: 0.9,
       });
-        delayTime = 100;
+        delayTime = 50;
         // console.log("API call successful, processing response");
       return response.choices[0].message.content.trim();
     } catch (error) {
@@ -148,7 +148,7 @@ async function processCsvRow(row, rowIndex) {
     row['Variant Price'] = parseFloat(cleanedPrice);
   }
 
-    await delay(250);
+    await delay(50);
 
   return row;
 }
