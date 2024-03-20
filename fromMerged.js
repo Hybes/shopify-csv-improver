@@ -71,28 +71,36 @@ async function processCsvRow(row, rowIndex) {
     row["Body (HTML)"] = await generateOrImproveText(
       `Write a detailed description, optimised for SEO and using HTML specifically for a Shopify product for the product titled "${row.Title}", the content should start with a h1 title and you should only return the HTML code without the wrapping backticks and language identifier, and nothing else.`
     );
-    console.log(row["Body (HTML)"], `Current Time: ${new Date().toISOString()}`);
+    console.log(`${new Date().toISOString()} - New HTML:`)
+    console.log(row["Body (HTML)"]);
+    console.log('')
   }
 
   if (!row["SEO Title"] && row.Title) {
     row["SEO Title"] = await generateOrImproveText(
       `Generate an SEO-friendly title for a product titled "${row.Title}" to be used in shopify as my SEO title. Please only return the title as plain text and nothing else.`
     );
-    console.log(row["SEO Title"], `Current Time: ${new Date().toISOString()}`);
+    console.log(`${new Date().toISOString()} - New SEO Title:`)
+    console.log(row["SEO Title"]);
+    console.log('')
   }
 
   if (!row["SEO Description"] && row.Title) {
     row["SEO Description"] = await generateOrImproveText(
       `Using your knowledge of UK Motocross, write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
     );
-    console.log(row["SEO Description"], `Current Time: ${new Date().toISOString()}`);
+    console.log(`${new Date().toISOString()} - New SEO Description:`)
+    console.log(row["SEO Description"]);
+    console.log('')
   }
 
     if (!row["Image Alt Text"] && row.Title) {
     row["Image Alt Text"] = await generateOrImproveText(
       `Write an alt text for the product image of the product titled "${row.Title}", you should only return the alt text as plain text and nothing else.`
     );
-      console.log(row["Image Alt Text"], `Current Time: ${new Date().toISOString()}`);
+    console.log(`${new Date().toISOString()} - New Image Alt Text:`)
+      console.log(row["Image Alt Text"]);
+      console.log('')
     }
 
   return row;
