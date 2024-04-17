@@ -1,0 +1,136 @@
+const XLSX = require('xlsx');
+const fs = require('fs');
+const csvWriter = require('csv-writer').createObjectCsvWriter;
+
+async function processXlsxFile(inputFilePath, outputFilePath) {
+  const workbook = XLSX.readFile(inputFilePath);
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(sheet);
+
+  // Group data by base SKU
+  const groupedData = data.reduce((acc, row) => {
+    const match = row['SKU code'].match(/(.+)-[A-Z0-9]+$/i);
+    if (match) {
+      const baseSKU = match[1];
+      if (!acc[baseSKU]) {
+        acc[baseSKU] = [];
+      }
+      acc[baseSKU].push(row);
+    }
+    return acc;
+  }, {});
+
+  // Process each group to handle variants
+  const csvData = [];
+  Object.values(groupedData).forEach(group => {
+    // Sort to ensure Medium size comes first, if exists
+    group.sort((a, b) => {
+      const sizeOrder = ['M', 'S', 'L', 'XL', 'XS', '2X', 'XXL', '3XL'];
+      return sizeOrder.indexOf(a['Material'].split('-').pop()) - sizeOrder.indexOf(b['Material'].split('-').pop());
+    });
+
+    group.forEach((row, index) => {
+      const size = row['SKU code'].match(/-(\w+)$/)?.[1];
+      if (index === 0) { // First item in group, add full details
+        csvData.push(createCsvRow(row, size, true));
+      } else { // Variant, add minimal details
+        csvData.push(createCsvRow(row, size, false));
+      }
+    });
+  });
+
+  const csvWriterInstance = csvWriter({
+    path: outputFilePath,
+    header: [
+      {id: 'Handle', title: 'Handle'},
+      {id: 'Title', title: 'Title'},
+      {id: 'Body', title: 'Body (HTML)'},
+      {id: 'Vendor', title: 'Vendor'},
+      {id: 'Type', title: 'Type'},
+      {id: 'Tags', title: 'Tags'},
+      {id: 'Published', title: 'Published'},
+      {id: 'Option1_Name', title: 'Option1 Name'},
+      {id: 'Option1_Value', title: 'Option1 Value'},
+      {id: 'Variant_SKU', title: 'Variant SKU'},
+      {id: 'Variant_Inventory_Qty', title: 'Variant Inventory Qty'},
+      {id: 'Variant_Price', title: 'Variant Price'},
+      {id: 'Variant_Compare_At_Price', title: 'Variant Compare At Price'},
+      {id: 'Variant_Requires_Shipping', title: 'Variant Requires Shipping'},
+      {id: 'Variant_Taxable', title: 'Variant Taxable'},
+      {id: 'Image_Src', title: 'Image Src'},
+      { id: 'Image_Alt_Text', title: 'Image Alt Text' },
+      { id: 'Status', title: 'Status'}
+    ]
+  });
+
+  await csvWriterInstance.writeRecords(csvData)
+    .then(() => console.log('The CSV file was written successfully'));
+}
+
+function createCsvRow(row, sizeCode, isDefaultVariant) {
+  const sizeMapping = {
+    S: 'Small',
+    M: 'Medium',
+    L: 'Large',
+    XL: 'XLarge',
+    XS: 'XSmall',
+    '2X': '2XLarge',
+    XXL: '2XLarge',
+    '3XL': '3XLarge'
+  };
+  const sizeFullName = sizeMapping[sizeCode] || sizeCode;
+  if (isDefaultVariant) {
+    return {
+      Handle: row['Material'] + '-' + row['Colorway'],
+      Title: row['Material Description'],
+      Body: `<h1>${row['Material Description No Color']}</h1><p>${row['Main Materials']}</p>`,
+      Vendor: 'Fox',
+      Type: row['Product Hierarchy Desc 2'],
+      Tags: [row['Collection'], row['Franchise'], row['Product Hierarchy Desc 3'], row['Product Hierarchy Desc 4'], row['Product Hierarchy Desc 5'], row['Product Hierarchy Desc 6']].filter(Boolean).join(', '),
+      Published: 'TRUE',
+      Option1_Name: 'Size',
+      Option1_Value: sizeFullName,
+      Variant_SKU: row['SKU code'],
+      Variant_Inventory_Qty: 0,
+      Variant_Price: row['Retail Price GBP'].trim().replace('£', ''),
+      Variant_Compare_At_Price: '',
+      Variant_Requires_Shipping: 'TRUE',
+      Variant_Taxable: 'TRUE',
+      Image_Src: `https://store.brth.uk/moto101/Fox/${row['Material']}_1.png`,
+      Image_Alt_Text: `${row['Material Description']} in ${sizeFullName}`,
+      Status: 'active'
+    };
+  } else {
+    return {
+      Handle: row['Material'] + '-' + row['Colorway'],
+      Title: '',
+      Body: '',
+      Vendor: '',
+      Type: '',
+      Tags: '',
+      Published: '',
+      Option1_Name: '',
+      Option1_Value: sizeFullName,
+      Variant_SKU: row['SKU code'],
+      Variant_Inventory_Qty: 0,
+      Variant_Price: row['Retail Price GBP'].trim().replace('£', ''),
+      Variant_Compare_At_Price: '',
+      Variant_Requires_Shipping: 'TRUE',
+      Variant_Taxable: 'TRUE',
+      Image_Src: '',
+      Image_Alt_Text: '',
+      Status: ''
+    };
+  }
+}
+
+const inputFilePath = process.argv[2];
+const outputFilePath = process.argv[3];
+
+if (!inputFilePath || !outputFilePath) {
+  console.error('Please provide the input and output file paths');
+  process.exit(1);
+}
+
+processXlsxFile(inputFilePath, outputFilePath);
