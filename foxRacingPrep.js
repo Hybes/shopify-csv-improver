@@ -2,43 +2,57 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const csvWriter = require('csv-writer').createObjectCsvWriter;
 
-async function processXlsxFile(inputFilePath, outputFilePath) {
+async function processXlsxFile(inputFilePath, outputFilePath, secondFilePath) {
   const workbook = XLSX.readFile(inputFilePath);
+  const secondWorkbook = XLSX.readFile(secondFilePath); // Read the second file
+
   const sheetName = workbook.SheetNames[0];
+  const secondSheetName = secondWorkbook.SheetNames[0]; // Assume first sheet for simplicity
+
   const sheet = workbook.Sheets[sheetName];
+  const secondSheet = secondWorkbook.Sheets[secondSheetName]; // Get sheet from second file
+
   const data = XLSX.utils.sheet_to_json(sheet);
+  const secondData = XLSX.utils.sheet_to_json(secondSheet); // Convert second sheet to JSON
+
+  const secondDataMap = secondData.reduce((acc, row) => {
+    acc[row.Master] = row; // Use 'Master' as key
+    return acc;
+  }, {});
 
   // Group data by base SKU
   const groupedData = data.reduce((acc, row) => {
     const match = row['SKU code'].match(/(.+)-[A-Z0-9]+$/i);
     if (match) {
       const baseSKU = match[1];
-      if (!acc[baseSKU]) {
-        acc[baseSKU] = [];
+      const colorway = row['Colorway']; // Extract colorway
+      const masterKey = `${baseSKU.split('-')[0]}-${colorway}`; // Combine baseSKU and colorway for unique grouping
+      if (!acc[masterKey]) {
+        acc[masterKey] = [];
       }
-      acc[baseSKU].push(row);
+      acc[masterKey].push(row);
     }
     return acc;
   }, {});
 
   // Process each group to handle variants
   const csvData = [];
-  Object.values(groupedData).forEach(group => {
-    // Sort to ensure Medium size comes first, if exists
-    group.sort((a, b) => {
-      const sizeOrder = ['M', 'S', 'L', 'XL', 'XS', '2X', 'XXL', '3XL'];
-      return sizeOrder.indexOf(a['Material'].split('-').pop()) - sizeOrder.indexOf(b['Material'].split('-').pop());
-    });
+Object.values(groupedData).forEach(group => {
+  // Your existing sorting logic here (if needed)
 
-    group.forEach((row, index) => {
-      const size = row['SKU code'].match(/-(\w+)$/)?.[1];
-      if (index === 0) { // First item in group, add full details
-        csvData.push(createCsvRow(row, size, true));
-      } else { // Variant, add minimal details
-        csvData.push(createCsvRow(row, size, false));
-      }
-    });
+  group.forEach((row, index) => {
+    const size = row['SKU code'].match(/-(\w+)$/)?.[1];
+    const baseSKU = row['SKU code'].match(/(.+)-[A-Z0-9]+$/i)[1];
+    const colorway = row['Colorway']; // Extract colorway
+    const masterKey = `${baseSKU.split('-')[0]}`; // Use the baseSKU portion for lookup in secondDataMap
+    const secondRow = secondDataMap[masterKey]; // Find matching row in secondDataMap
+    if (index === 0) { // First item in each color group, add full details
+      csvData.push(createCsvRow(row, size, true, secondRow)); // Pass secondRow for title and description
+    } else { // Variant, add minimal details
+      csvData.push(createCsvRow(row, size, false, secondRow)); // Still pass secondRow for potential title and description reuse
+    };
   });
+});
 
   const csvWriterInstance = csvWriter({
     path: outputFilePath,
@@ -66,9 +80,9 @@ async function processXlsxFile(inputFilePath, outputFilePath) {
 
   await csvWriterInstance.writeRecords(csvData)
     .then(() => console.log('The CSV file was written successfully'));
-}
+  }
 
-function createCsvRow(row, sizeCode, isDefaultVariant) {
+function createCsvRow(row, sizeCode, isDefaultVariant, secondRow) {
   const sizeMapping = {
     S: 'Small',
     M: 'Medium',
@@ -80,11 +94,14 @@ function createCsvRow(row, sizeCode, isDefaultVariant) {
     '3XL': '3XLarge'
   };
   const sizeFullName = sizeMapping[sizeCode] || sizeCode;
+  const title = secondRow ? `${secondRow['Product Name']} ${row['Colorway']}` : row['Material Description'];
+  const body = secondRow ? `${secondRow['Description']} ${secondRow['Specifications']}` : `<h1>${row['Material Description No Color']}</h1><p>${row['Main Materials']}</p>`;
+
   if (isDefaultVariant) {
     return {
       Handle: row['Material'] + '-' + row['Colorway'],
-      Title: row['Material Description'],
-      Body: `<h1>${row['Material Description No Color']}</h1><p>${row['Main Materials']}</p>`,
+      Title: title,
+      Body: body,
       Vendor: 'Fox',
       Type: row['Product Hierarchy Desc 2'],
       Tags: [row['Collection'], row['Franchise'], row['Product Hierarchy Desc 3'], row['Product Hierarchy Desc 4'], row['Product Hierarchy Desc 5'], row['Product Hierarchy Desc 6']].filter(Boolean).join(', '),
@@ -127,10 +144,11 @@ function createCsvRow(row, sizeCode, isDefaultVariant) {
 
 const inputFilePath = process.argv[2];
 const outputFilePath = process.argv[3];
+const secondFilePath = process.argv[4];
 
-if (!inputFilePath || !outputFilePath) {
-  console.error('Please provide the input and output file paths');
+if (!inputFilePath || !outputFilePath || !secondFilePath) {
+  console.error('Please provide the input, output, and second file paths');
   process.exit(1);
 }
 
-processXlsxFile(inputFilePath, outputFilePath);
+processXlsxFile(inputFilePath, outputFilePath, secondFilePath);
