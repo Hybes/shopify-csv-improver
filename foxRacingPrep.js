@@ -91,7 +91,13 @@ function createCsvRow(row, sizeCode, isDefaultVariant, secondRow) {
     XS: 'XSmall',
     '2X': '2XLarge',
     XXL: '2XLarge',
-    '3XL': '3XLarge'
+    '3XL': '3XLarge',
+    YXS: 'Youth XSmall',
+    YS: 'Youth Small',
+    YM: 'Youth Medium',
+    YL: 'Youth Large',
+    YXL: 'Youth XLarge',
+    OS: 'One Size'
   };
   const sizeFullName = sizeMapping[sizeCode] || sizeCode;
   const title = secondRow ? `${secondRow['Product Name']} ${row['Colorway']}` : row['Material Description'];
@@ -114,8 +120,8 @@ function createCsvRow(row, sizeCode, isDefaultVariant, secondRow) {
       Variant_Compare_At_Price: '',
       Variant_Requires_Shipping: 'TRUE',
       Variant_Taxable: 'TRUE',
-      Image_Src: `https://store.brth.uk/moto101/Fox/${row['Material']}_1.png`,
-      Image_Alt_Text: `${row['Material Description']} in ${sizeFullName}`,
+      Image_Src: `https://moto101.r2.cnnct.co.uk/${row['Material'].replace(/-/g, '_')}_1.png`,
+      Image_Alt_Text: `${title} ${sizeFullName} Image`,
       Status: 'active'
     };
   } else {

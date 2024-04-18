@@ -81,19 +81,23 @@ async function processCsvRow(row, rowIndex) {
       `Generate an SEO-friendly title for a product titled "${row.Title}" to be used in shopify as my SEO title. Please only return the title as plain text and nothing else.`
     );
   } else {
-    row["SEO Title"] = await generateOrImproveText(
-      `Improve this SEO title: "${row["SEO Title"]}" and only return the improved title as plain text and nothing else.`
-    );
+    row["SEO Title"] = ''
   }
 
   if (!row["SEO Description"] && row.Title) {
     row["SEO Description"] = await generateOrImproveText(
       `Using your knowledge of UK Motocross, write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
     );
-  } else {
+  } else if (row["SEO Description"]) {
     row["SEO Description"] = await generateOrImproveText(
       `Using your knowledge of UK Motocross, Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
     ).replace(/[\n\r]/g, " ").replace(/^"|"$/g, '');
+  } else if (!row["SEO Description"] && row.Title) {
+    row["SEO Description"] = await generateOrImproveText(
+      `Using your knowledge of UK Motocross, write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
+    );
+  } else {
+    row["SEO Description"] = ''
   }
 
     if (!row["Image Alt Text"] && row.Title) {
