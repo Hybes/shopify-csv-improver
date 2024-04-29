@@ -91,9 +91,10 @@ async function processCsvRow(row, rowIndex) {
     );
   }
   else if (row["SEO Description"] && row.Title) {
-    row["SEO Description"] = await generateOrImproveText(
+    const seoDescription = await generateOrImproveText(
       `Using your knowledge of UK Motocross, Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", and the title ${row.Title} please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
-    ).replace(/[\n\r]/g, " ").replace(/^"|"$/g, '');
+    );
+    row["SEO Description"] = seoDescription.replace(/[\n\r]/g, " ").replace(/^"|"$/g, '');
   }
   else {
     row["SEO Description"] = ''
