@@ -88,15 +88,13 @@ async function processCsvRow(row, rowIndex) {
     row["SEO Description"] = await generateOrImproveText(
       `Using your knowledge of UK Motocross, write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
     );
-  } else if (row["SEO Description"]) {
+  }
+  else if (row["SEO Description"] && row.Title) {
     row["SEO Description"] = await generateOrImproveText(
-      `Using your knowledge of UK Motocross, Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
+      `Using your knowledge of UK Motocross, Improve this SEO description for a shopify product that already has the description: "${row["SEO Description"]}", and the title ${row.Title} please only return the new SEO description as plain text and nothing else. The response should be more than 60 characters, but less than 140.`
     ).replace(/[\n\r]/g, " ").replace(/^"|"$/g, '');
-  } else if (!row["SEO Description"] && row.Title) {
-    row["SEO Description"] = await generateOrImproveText(
-      `Using your knowledge of UK Motocross, write a detailed description, optimised for SEO specifically for a Shopify product for the product titled "${row.Title}", you should only return the plain text description and nothing else. The response should be more than 60 characters, but less than 140.`
-    );
-  } else {
+  }
+  else {
     row["SEO Description"] = ''
   }
 
@@ -106,26 +104,9 @@ async function processCsvRow(row, rowIndex) {
     );
     }
 
-  if (
-    row.Title &&
-    row["Body (HTML)"] &&
-    row["SEO Title"] &&
-    row["SEO Description"]
-  ) {
-    const tagsPrompt = `Given the product title "${row.Title}", SEO title "${row["SEO Title"]}", and SEO description "${row["SEO Description"]}", generate at least 10 related tags to be used for shopify filtering, please only return the tags, comma seperated.`;
-    row.Tags = await generateOrImproveText(tagsPrompt);
-  }
-
-  if (row.Title && row['Body (HTML)']) {
-    const categoryPrompt = `Based on the product title and description, choose the most appropriate category, You MUST use one of the categories in my lists and CAN NOT use something that is not in the following list: Kit Combos, Jerseys, Pants, Gloves, Socks, Knee Brace Socks, Body Warmers, Waterproof Gear, Youth Kit, Kit Bags, Boot Bags, Air Break, Frontline, O frame 2.0, O frame, L frame, Vue, Airspace, Main, Youth, Powerbomb, Powercore, Lenses, Tear Offs, Roll Off Systems, Roll Off Film, Face Foam, Goggle Bags, Moto-10 Spherical, Moto-9S Flex, MX-9 MIPS, V1, V3, V3 RS, Peaks, Instinct, Motion, Comp, Body Protection, Knee Braces, Knee & Elbow Guards, Brake Pads, Brake Rotors, Brake Lines, Brake Parts & Accessories, Plastics, Hand Guards, Seat Covers, Seat Foams, Air Filters, Oil Filters, Fuel Filters, Airbox Accessories, 2-Stroke Exhausts, 4-Stroke Exhausts, Exhaust Accessories, Chains, Sprockets, Chain Guides, Sliders & Rollers, Chain Master Links, Axle Blocks, Sprocket Accessories, Grips, Throttle Tubes, Handlebars, Barpads, Bar Mounts, Brake & Clutch Levers, Foot Pegs, Kick Stands, Brake Pedals, Gear Levers, Cables & Wires, Control Accessories, Pistons, Gaskets, Clutch Parts, Radiators, Engine Covers, Oil Filter Covers, Engine Bearings, Rebuild Kits, Engine Accessories, Bolt Kits, Bling Kits, Engine Drain Bolts, Seals & Bushings, Suspension Bearings, Springs, Triple Clamps, Holeshot Device, Fork Bleeders, Linkage Kits, Suspension Accessories, Tyres, Wheel Sets, Innertubes, Mousses, Rim Locks & Tapes, Hour Meters, Spark Plugs, Kill & MAP Switches, Other Electrics, Tyre Levers, Spoke Wrench, T-handles, Tool Box, Engine Oil, Gear Oil, 2-Stroke Oil, Radiator Coolant, Lubricants & Sprays, Cleaning Products, Airbox Covers, Cleaning Accessories, Bike Stands, Fuel Cans, Chairs, Ramps, Pit Boards, Pumps, Straps. If the prduct is related to Stark/Stark Varg, please place it in one of the following: "Bikes, Parts, Tools & workshop". Please only return the category name and nothing else. YOU MUST NOT STRAY OUTSIDE OF MY PROVIDED LIST. You should dynamically work out the category only based on this list. Here is the title "${row.Title}" and description "${row['Body (HTML)']}"`;
-    row['Product Category'] = await generateOrImproveText(categoryPrompt);
-    console.log(`Category for ${row.Title}: ${row['Product Category']}`);
-  }
-
-  if (row.Title && row['Body (HTML)']) {
-    const typePrompt = `Given the product title "${row.Title}" and its description, list all potential item collections and product types it could belong to. You should dynamically fetch the type from the title, for example: 180 Atlas Jersey - Black/Green would be in the type/collection '180' and V1 Flora Helmet - Dark Indigo Blue would be 'V1' Please only return the item collections and product types, comma separated, and with the first letter of each word capitalized, and NOTHING else. Here is the description: "${row['Body (HTML)']}"`;
-    row['Type'] = await generateOrImproveText(typePrompt);
-  }
+  row.Tags = ''
+  row['Product Category'] = ''
+  row['Type'] = ''
 
     const capitalizeFirstLetter = (string) => {
         return string.charAt(0).toUpperCase() + string.slice(1);

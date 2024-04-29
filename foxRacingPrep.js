@@ -35,22 +35,45 @@ async function processXlsxFile(inputFilePath, outputFilePath, secondFilePath) {
     return acc;
   }, {});
 
-  // Process each group to handle variants
-  const csvData = [];
+// Process each group to handle variants
+const csvData = [];
 Object.values(groupedData).forEach(group => {
-  // Your existing sorting logic here (if needed)
-
   group.forEach((row, index) => {
     const size = row['SKU code'].match(/-(\w+)$/)?.[1];
     const baseSKU = row['SKU code'].match(/(.+)-[A-Z0-9]+$/i)[1];
-    const colorway = row['Colorway']; // Extract colorway
     const masterKey = `${baseSKU.split('-')[0]}`; // Use the baseSKU portion for lookup in secondDataMap
     const secondRow = secondDataMap[masterKey]; // Find matching row in secondDataMap
-    if (index === 0) { // First item in each color group, add full details
-      csvData.push(createCsvRow(row, size, true, secondRow)); // Pass secondRow for title and description
-    } else { // Variant, add minimal details
-      csvData.push(createCsvRow(row, size, false, secondRow)); // Still pass secondRow for potential title and description reuse
-    };
+    // Add the primary row
+    csvData.push(createCsvRow(row, size, index === 0, secondRow)); // This remains unchanged
+
+    // If it's the first item in each color group, add 9 additional image rows
+    if (index === 0) {
+      const imageExtensions = ['_1.jpeg', '_1.jpg','_2.png', '_2.jpeg', '_2.jpg', '_3.png', '_3.jpeg', '_3.jpg', '_4.png', '_4.jpeg', '_4.jpg', '_5.png', '_5.jpeg', '_5.jpg', '_6.png', '_6.jpeg', '_6.jpg', '_7.png', '_7.jpeg', '_7.jpg', '_8.png', '_8.jpeg', '_8.jpg', '_9.png', '_9.jpeg', '_9.jpg', '_10.png', '_10.jpeg', '_10.jpg'];
+      imageExtensions.forEach((ext, extIndex) => {
+        const imageNumber = Math.floor(extIndex / 3) + 2;
+        csvData.push({
+          Handle: row['Material'] + '-' + row['Colorway'],
+          Title: '',
+          Body: '',
+          Vendor: '',
+          Type: '',
+          Tags: '',
+          Published: '',
+          Option1_Name: '',
+          Option1_Value: '',
+          Variant_SKU: '',
+          Variant_Inventory_Qty: '',
+          Variant_Price: '',
+          Variant_Compare_At_Price: '',
+          Variant_Requires_Shipping: '',
+          Variant_Taxable: '',
+          Image_Position: imageNumber,
+          Image_Src: `https://cdn.shopify.com/s/files/1/0281/4781/0339/files/${row['Material'].replace(/-/g, '_')}${ext}`,
+          Image_Alt_Text: `${secondRow ? `${secondRow['Product Name']} ${row['Colorway']}` : row['Material Description']} Image ${Math.floor(extIndex / 3) + 2}`,
+          Status: 'active'
+        });
+      });
+    }
   });
 });
 
@@ -60,7 +83,8 @@ Object.values(groupedData).forEach(group => {
       {id: 'Handle', title: 'Handle'},
       {id: 'Title', title: 'Title'},
       {id: 'Body', title: 'Body (HTML)'},
-      {id: 'Vendor', title: 'Vendor'},
+      { id: 'Vendor', title: 'Vendor' },
+      {id: 'Product_Category', title: 'Product Category'},
       {id: 'Type', title: 'Type'},
       {id: 'Tags', title: 'Tags'},
       {id: 'Published', title: 'Published'},
@@ -72,7 +96,8 @@ Object.values(groupedData).forEach(group => {
       {id: 'Variant_Compare_At_Price', title: 'Variant Compare At Price'},
       {id: 'Variant_Requires_Shipping', title: 'Variant Requires Shipping'},
       {id: 'Variant_Taxable', title: 'Variant Taxable'},
-      {id: 'Image_Src', title: 'Image Src'},
+      { id: 'Image_Src', title: 'Image Src' },
+      { id: 'Image_Position', title: 'Image Position' },
       { id: 'Image_Alt_Text', title: 'Image Alt Text' },
       { id: 'Status', title: 'Status'}
     ]
@@ -80,7 +105,13 @@ Object.values(groupedData).forEach(group => {
 
   await csvWriterInstance.writeRecords(csvData)
     .then(() => console.log('The CSV file was written successfully'));
-  }
+}
+
+// tags need to be blank
+// published needs to be TRUE
+// status needs to be active
+// 'Product Type' needs to be based on Title of product, matching an array - Hoodie, Cap, Shorts, Socks, T-Shirt, etc.
+// 'Product Category' needs to be based on tags, matching Navigation - array: Clothes = Apparel & Accessories > Clothing.
 
 function createCsvRow(row, sizeCode, isDefaultVariant, secondRow) {
   const sizeMapping = {
@@ -103,14 +134,18 @@ function createCsvRow(row, sizeCode, isDefaultVariant, secondRow) {
   const title = secondRow ? `${secondRow['Product Name']} ${row['Colorway']}` : row['Material Description'];
   const body = secondRow ? `${secondRow['Description']} ${secondRow['Specifications']}` : `<h1>${row['Material Description No Color']}</h1><p>${row['Main Materials']}</p>`;
 
+  const imageBaseSrc = `https://cdn.shopify.com/s/files/1/0281/4781/0339/files/${row['Material'].replace(/-/g, '_')}`;
+  const imageExtensions = ['_1.png', '_1.jpeg', '_1.jpg'];
+
   if (isDefaultVariant) {
-    return {
+    return imageExtensions.map(ext => ({
       Handle: row['Material'] + '-' + row['Colorway'],
       Title: title,
       Body: body,
       Vendor: 'Fox',
-      Type: row['Product Hierarchy Desc 2'],
-      Tags: [row['Collection'], row['Franchise'], row['Product Hierarchy Desc 3'], row['Product Hierarchy Desc 4'], row['Product Hierarchy Desc 5'], row['Product Hierarchy Desc 6']].filter(Boolean).join(', '),
+      Product_Category: 'Apparel & Accessories > Clothing',
+      Type: 'Casual',
+      Tags: 'Casual wear',
       Published: 'TRUE',
       Option1_Name: 'Size',
       Option1_Value: sizeFullName,
@@ -120,16 +155,18 @@ function createCsvRow(row, sizeCode, isDefaultVariant, secondRow) {
       Variant_Compare_At_Price: '',
       Variant_Requires_Shipping: 'TRUE',
       Variant_Taxable: 'TRUE',
-      Image_Src: `https://moto101.r2.cnnct.co.uk/${row['Material'].replace(/-/g, '_')}_1.png`,
+      Image_Src: imageBaseSrc + ext,
+      Image_Position: 1,
       Image_Alt_Text: `${title} ${sizeFullName} Image`,
       Status: 'active'
-    };
+    })).flat();
   } else {
     return {
       Handle: row['Material'] + '-' + row['Colorway'],
       Title: '',
       Body: '',
       Vendor: '',
+      Product_Category: '',
       Type: '',
       Tags: '',
       Published: '',
