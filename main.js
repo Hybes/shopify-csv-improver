@@ -1,3 +1,4 @@
+require("dotenv").config();
 const csv = require("csv-parser");
 const fs = require("fs");
 const OpenAI = require("openai");
