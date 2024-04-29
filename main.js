@@ -2,7 +2,7 @@ const csv = require("csv-parser");
 const fs = require("fs");
 const OpenAI = require("openai");
 
-const openai = new OpenAI(process.env.OPENAI_API_KEY);
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
 
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
