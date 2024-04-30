@@ -106,8 +106,8 @@ async function processCsvRow(row, rowIndex) {
     );
     }
 
-  row.Tags = ''
-  row['Product Category'] = ''
+  row.Tags = row.Tags ? row.Tags : '';
+  row['Product Category'] = row['Product Category'] ? row['Product Category'] : '';
   row['Type'] = ''
 
     const capitalizeFirstLetter = (string) => {
