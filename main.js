@@ -32,11 +32,13 @@ async function exponentialBackoff() {
   delayTime = Math.min(delayTime * 2, maxDelay);
 }
 
+let totalCost = 0;
+
 async function generateOrImproveText(prompt, maxTokens = 4000) {
     try {
         // console.log(`Generating or improving text for prompt: ${prompt}`);
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: 'system',
@@ -50,8 +52,13 @@ async function generateOrImproveText(prompt, maxTokens = 4000) {
         max_tokens: maxTokens,
         temperature: 0.9,
       });
-        delayTime = 50;
+        delayTime = 1;
         // console.log("API call successful, processing response");
+        const inputTokens = response.usage.prompt_tokens;
+        const outputTokens = response.usage.completion_tokens;
+        const cost = (inputTokens / 1e6) * 0.15 + (outputTokens / 1e6) * 0.6;
+        totalCost += cost;
+
       return response.choices[0].message.content.trim();
     } catch (error) {
       if (error.code === "rate_limit_exceeded") {
@@ -101,9 +108,10 @@ async function processCsvRow(row, rowIndex) {
   }
 
     if (!row["Image Alt Text"] && row.Title) {
-    row["Image Alt Text"] = await generateOrImproveText(
-      `Write an alt text for the product image of the product titled "${row.Title}", you should only return the alt text as plain text and nothing else.`
-    );
+      let altText = await generateOrImproveText(
+        `Write an alt text for the product image of the product titled "${row.Title}", you should only return the alt text as plain text and nothing else.`
+      );
+      row["Image Alt Text"] = altText.replace(/^"|"$/g, '');
     }
 
   row.Tags = row.Tags ? row.Tags : '';
@@ -185,6 +193,9 @@ async function main() {
   } else {
     console.log("No products to process.");
   }
+
+  // Print the total cost at the end
+  console.log(`Total cost of OpenAI API calls: $${totalCost.toFixed(4)}`);
 }
 
 main();
